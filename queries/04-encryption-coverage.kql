@@ -1,0 +1,16 @@
+// 04 — Encryption (BitLocker/FileVault) coverage by OS and ownership
+// Answers: "Where is our disk-encryption gap?"
+// Requires: "Devices" category.
+// Note: EncryptionStatusString values vary; extend the match list if your tenant differs.
+
+let encryptedValues = dynamic(["true", "encrypted", "yes", "1"]);
+IntuneDevices
+| summarize arg_max(TimeGenerated, *) by DeviceId
+| extend Encrypted = case(tolower(tostring(EncryptionStatusString)) in (encryptedValues), "Encrypted", "Not encrypted / Unknown")
+| summarize
+    Total = count(),
+    EncryptedCount = countif(Encrypted == "Encrypted")
+    by OS, Ownership
+| extend CoveragePct = round(100.0 * EncryptedCount / Total, 1)
+| project OS, Ownership, Total, EncryptedCount, CoveragePct
+| order by Total desc
