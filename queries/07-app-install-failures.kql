@@ -1,0 +1,22 @@
+// 07 — Win32/LOB app install failures: top failing apps, error codes, blast radius
+// Answers: "Which apps are failing to install, and how widespread is it?"
+// Requires: "OperationalLogs" category.
+// Note: Properties is a JSON string; adjust the P.* references to your tenant's payload.
+
+let lookback = 30d;
+IntuneOperationalLogs
+| where TimeGenerated > ago(lookback)
+| extend P = parse_json(Properties)
+| where toint(P.ActivityType) == 5 // 5 = Application
+| where toint(P.ActivityResult) != 1 // 1 = Success
+| extend
+    AppName = tostring(P.ApplicationName),
+    ErrorCode = tostring(P.ErrorCode),
+    DeviceName = tostring(P.DeviceName),
+    UserId = tostring(P.UserId)
+| summarize
+    FailedInstalls = count(),
+    AffectedDevices = dcount(DeviceName),
+    AffectedUsers = dcount(UserId)
+    by AppName, ErrorCode
+| order by FailedInstalls desc
