@@ -1,0 +1,23 @@
+// 09 — Join-type distribution + non-compliant Entra-joined devices (CA readiness)
+// Answers: "Are we ready for compliance-based Conditional Access?"
+// Requires: "Devices" and "DeviceComplianceOrg" categories.
+// Devices that are Entra-joined but non-compliant will be blocked the moment
+// CA starts requiring compliant devices — this query finds them first.
+
+let devices =
+    IntuneDevices
+    | summarize arg_max(TimeGenerated, *) by DeviceId;
+let compliance =
+    IntuneDeviceComplianceOrg
+    | summarize arg_max(TimeGenerated, *) by DeviceId;
+// Part A: join-type distribution across the fleet
+devices
+| summarize Devices = count() by JoinType
+| order by Devices desc;
+// Part B: non-compliant Entra-joined devices — CA block risk list
+devices
+| join kind=inner compliance on DeviceId
+| where ComplianceState !~ "Compliant"
+| where JoinType =~ "AzureAD" or JoinType has "Entra"
+| project DeviceName, UserName, UPN, OS, OSVersion, JoinType, ComplianceState, SerialNumber
+| order by DeviceName asc
