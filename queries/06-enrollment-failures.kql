@@ -1,0 +1,19 @@
+// 06 — Enrollment failures grouped by error
+// Answers: "Why are enrollments failing, and on which devices?"
+// Requires: "OperationalLogs" category.
+// Note: Properties is a JSON string; field names inside it can vary by event —
+// adjust the P.* references below to match your tenant's payload.
+
+let lookback = 30d;
+IntuneOperationalLogs
+| where TimeGenerated > ago(lookback)
+| extend P = parse_json(Properties)
+| where toint(P.ActivityType) == 1 // 1 = Enrollment
+| where toint(P.ActivityResult) != 1 // 1 = Success
+| extend
+    DeviceName = tostring(P.DeviceName),
+    UserId = tostring(P.UserId),
+    ErrorCode = tostring(P.ErrorCode),
+    ErrorDetail = tostring(P.ErrorDescription)
+| summarize Failures = count(), AffectedDevices = dcount(DeviceName) by ErrorCode, ErrorDetail
+| order by Failures desc
