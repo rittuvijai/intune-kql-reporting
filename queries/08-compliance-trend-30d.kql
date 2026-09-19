@@ -1,0 +1,16 @@
+// 08 — 30-day compliance trend (timechart-ready for dashboards/workbooks)
+// Answers: "Is our compliance posture improving or degrading?"
+// Requires: "DeviceComplianceOrg" category.
+
+let lookback = 30d;
+IntuneDeviceComplianceOrg
+| where TimeGenerated > ago(lookback)
+| summarize arg_max(TimeGenerated, *) by DeviceId, Day = bin(TimeGenerated, 1d)
+| summarize
+    Total = count(),
+    NonCompliant = countif(ComplianceState !~ "Compliant")
+    by Day
+| extend NonCompliantPct = round(100.0 * NonCompliant / Total, 1)
+| project Day, Total, NonCompliant, NonCompliantPct
+| order by Day asc
+| render timechart
