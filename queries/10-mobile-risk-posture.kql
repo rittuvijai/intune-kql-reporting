@@ -1,0 +1,14 @@
+// 10 — Mobile risk posture: jailbroken/rooted or unsupervised devices
+// Answers: "Which mobile devices violate our security baseline?"
+// Requires: "Devices" category.
+
+IntuneDevices
+| summarize arg_max(TimeGenerated, *) by DeviceId
+| where OS in~ ("iOS", "iPadOS", "Android", "AndroidEnterprise")
+| extend Risk = case(
+    JailBroken =~ "True", "Jailbroken / Rooted",
+    SupervisedStatusString !~ "Supervised", "Unsupervised",
+    "OK")
+| where Risk != "OK"
+| project Risk, DeviceName, UserName, UPN, OS, OSVersion, Model, SerialNumber
+| order by Risk asc, DeviceName asc
