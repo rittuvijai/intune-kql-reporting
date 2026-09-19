@@ -1,0 +1,15 @@
+// 02 — Actionable non-compliant device list, stalest first
+// Answers: "Which non-compliant devices should the helpdesk chase today?"
+// Requires: "Devices" category.
+// Note: LastContact arrives as a string; converted with todatetime().
+
+let staleAfterDays = 7; // highlight devices silent longer than this
+IntuneDevices
+| summarize arg_max(TimeGenerated, *) by DeviceId
+| where CompliantState =~ "NonCompliant"
+| extend LastContactTime = todatetime(LastContact)
+| extend DaysSinceContact = datetime_diff('day', now(), LastContactTime)
+| extend Priority = case(DaysSinceContact >= staleAfterDays, "High", "Normal")
+| project Priority, DeviceName, UserName, UPN, OS, OSVersion, JoinType, Ownership,
+          EncryptionStatusString, DaysSinceContact, SerialNumber
+| order by Priority asc, DaysSinceContact desc
