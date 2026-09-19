@@ -1,0 +1,16 @@
+// 01 — Device compliance posture by OS
+// Answers: "What % of each platform is compliant right now?"
+// Requires: Intune diagnostic setting -> Log Analytics, "Devices" category.
+// Note: IntuneDevices is a snapshot export; arg_max takes the latest record per device.
+
+IntuneDevices
+| summarize arg_max(TimeGenerated, *) by DeviceId
+| summarize
+    Total = count(),
+    Compliant = countif(CompliantState =~ "Compliant"),
+    NonCompliant = countif(CompliantState =~ "NonCompliant"),
+    InGracePeriod = countif(CompliantState =~ "InGracePeriod")
+    by OS
+| extend CompliancePct = round(100.0 * Compliant / Total, 1)
+| project OS, Total, Compliant, NonCompliant, InGracePeriod, CompliancePct
+| order by Total desc
