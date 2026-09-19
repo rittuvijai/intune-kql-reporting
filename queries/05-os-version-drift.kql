@@ -1,0 +1,16 @@
+// 05 — OS version drift: devices behind current builds
+// Answers: "Which devices are patch/update-ring targets?"
+// Requires: "Devices" category.
+// Tune currentBuilds to your approved baseline (examples: Win11 24H2 = 10.0.26100, 23H2 = 10.0.22631).
+
+let currentBuilds = dynamic(["10.0.26100", "10.0.22631"]);
+IntuneDevices
+| summarize arg_max(TimeGenerated, *) by DeviceId
+| where OS =~ "Windows"
+| extend BuildStatus = case(OSVersion in (currentBuilds), "Current", "Behind")
+| summarize
+    Total = count(),
+    BehindCount = countif(BuildStatus == "Behind")
+    by OSVersion
+| extend BehindPct = round(100.0 * BehindCount / Total, 1)
+| order by BehindCount desc
