@@ -1,0 +1,14 @@
+// 03 — Stale device cleanup candidates (30/60-day buckets)
+// Answers: "Which devices can we retire or wipe?"
+// Requires: "Devices" category. Tune the day thresholds below.
+
+let staleWarningDays = 30;
+let staleCriticalDays = 60;
+IntuneDevices
+| summarize arg_max(TimeGenerated, *) by DeviceId
+| extend LastContactTime = todatetime(LastContact)
+| extend DaysSinceContact = datetime_diff('day', now(), LastContactTime)
+| where DaysSinceContact >= staleWarningDays
+| extend Bucket = case(DaysSinceContact >= staleCriticalDays, "60+ days (retire candidate)", "30-59 days (verify with owner)")
+| summarize Devices = count() by Bucket, OS, Ownership
+| order by Bucket desc, Devices desc
